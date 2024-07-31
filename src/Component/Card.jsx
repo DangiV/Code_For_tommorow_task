@@ -1,21 +1,10 @@
-import React, { useEffect, useState } from 'react'
-import { makeApi } from '../Helper/ApiCall';
+import React, { useEffect, useState } from 'react';
 import { TablePagination } from '@mui/material';
-import '../assets/style/card.css'
+import '../assets/style/card.css';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
-import Button from '@mui/material/Button';
-
-import { styled } from '@mui/material/styles';
-import CardHeader from '@mui/material/CardHeader';
-import CardMedia from '@mui/material/CardMedia';
-import CardContent from '@mui/material/CardContent';
-import CardActions from '@mui/material/CardActions';
-import Collapse from '@mui/material/Collapse';
-import Avatar from '@mui/material/Avatar';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import { red } from '@mui/material/colors';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchProducts, removeItem } from '../redux/feature/cartSlice';
 
 const style = {
     position: 'absolute',
@@ -32,7 +21,9 @@ const style = {
 };
 
 const Card = () => {
-    const [details, setDetails] = useState([]);
+    const dispatch = useDispatch();
+    const { products } = useSelector((state) => state.allCart);
+
     const [rowsPerPage, setRowsPerPage] = useState(6);
     const [page, setPage] = useState(0);
     const [open, setOpen] = useState(false);
@@ -43,72 +34,48 @@ const Card = () => {
         email: "",
         country: "",
         number: ""
-    })
+    });
+    const [view, setView] = useState('card');
 
-    const [checked, setChecked] = useState('card')
+    useEffect(() => {
+        dispatch(fetchProducts());
+    }, [dispatch]);
 
-    console.log("checked", checked)
+    const handleOpen = () => setOpen(true);
+    const handleClose = () => setOpen(false);
 
-    const handleOpen = () => {
-        setOpen(true);
-    };
-    const handleClose = () => {
-        setOpen(false);
-    };
-
-    const getData = async () => {
-        try {
-            const response = await makeApi('get', "https://jsonplaceholder.typicode.com/posts");
-            // console.log(response)
-            setDetails(response)
-        } catch (error) {
-            console.log(error)
-        }
-    }
-
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
+    const handleChangePage = (event, newPage) => setPage(newPage);
     const handleChangeRowsPerPage = (event) => {
         setRowsPerPage(+event.target.value);
         setPage(0);
     };
 
-    //remove item from list but after refresh it will get auto come
-    const removeItem = (id) => {
-        console.log(id);
-        const afterFilterData = details.filter((item) => item.id !== id);
-        console.log("after delte", afterFilterData);
-        setDetails(afterFilterData)
-    }
+    const handleRemoveItem = (id) => dispatch(removeItem(id));
 
-    //function to get value of user details
     const handleChangeUser = (e) => {
         const { name, value } = e.target;
-        setUser((preVal) => ({
-            ...preVal,
-            [name]: value
-        }))
-    }
+        setUser((prev) => ({ ...prev, [name]: value }));
+    };
 
-    //submit form and get value 
-    const handleSumbit = (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        if (user.fname !== "" && user.lname !== "" && user.address !== "" && user.email !== "" && user.country !== "" && user.number !== "") {
-            alert('please enter complte details')
-            return;
+        const isFormIncomplete = Object.values(user).some(value => value === "");
+        if (isFormIncomplete) {
+            alert('Please enter complete details');
         } else {
-            console.log("after form submit", user);
-            setUser(" ")
-            alert("form submitted");
+            console.log("Form submitted", user);
+            setUser({
+                fname: "",
+                lname: "",
+                address: "",
+                email: "",
+                country: "",
+                number: ""
+            });
+            alert("Form submitted");
             handleClose();
         }
-    }
-
-    useEffect(() => {
-        getData();
-    }, [])
+    };
 
     return (
         <>
@@ -117,61 +84,53 @@ const Card = () => {
                     <div className="col-3">
                         <div>
                             <h2>View Toggle</h2>
-
                             <div className="cont">
                                 <div className="toggle">
-                                    <button onClick={() => setChecked('card')}>card</button>
-                                    <button onClick={() => setChecked('list')}>list</button>
+                                    <button onClick={() => setView('card')}>Card</button>
+                                    <button onClick={() => setView('list')}>List</button>
                                 </div>
                             </div>
                         </div>
                         <div>
                             <h2>Have a feedback</h2>
-                            <h6 className='feedBack' onClick={() => handleOpen()}>We are listing</h6>
+                            <h6 className='feedBack' onClick={handleOpen}>We are listening</h6>
                         </div>
                     </div>
-
-
                     <div className="col-9">
                         <div className='container'>
-                            {checked === 'card' ? <div className='row'>
-                                {
-                                    details.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => {
-                                        return (
-                                            <div className="card col-4" style={{ marginTop: '20px' }} key={item.id}>
-                                                <div className="card-body">
-                                                    <div className='d-flex'>
-                                                        <h5 className="card-title">{item.title}</h5>
-                                                        <p style={{ cursor: 'pointer' }} onClick={() => removeItem(item.id)}>&#x2716;</p>
-                                                    </div>
-                                                    <p className="card-text">{item.body}</p>
+                            {view === 'card' ? (
+                                <div className='row'>
+                                    {products.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => (
+                                        <div className="card col-4" style={{ marginTop: '20px' }} key={item.id}>
+                                            <div className="card-body">
+                                                <div className='d-flex'>
+                                                    <h5 className="card-title">{item.title}</h5>
+                                                    <p style={{ cursor: 'pointer' }} onClick={() => handleRemoveItem(item.id)}>&#x2716;</p>
                                                 </div>
-                                                <img className="" style={{ height: '120px', width: '120px' }} src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLwzhli3UiGlUsTtOAoxA_f4dKRDG9DGa99w&s" alt="Card image cap" />
+                                                <p className="card-text">{item.body}</p>
                                             </div>
-                                        )
-                                    })
-                                }
-                            </div> : <div className='row'>
-                                {
-                                    details.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => {
-                                        return (
-                                            <div className='listParent mt-5' key={item.id}>
-                                                <img className='listimg' src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLwzhli3UiGlUsTtOAoxA_f4dKRDG9DGa99w&s" alt="not found" />
-                                                <div className='TxtParent'>
-                                                    <h4>{item.title}</h4>
-                                                    <p>{item.body}</p>
-                                                </div>
-                                                <p  style={{ cursor: 'pointer', marginTop:'-50px' }} onClick={() => removeItem(item.id)}>&#x2716;</p>
+                                            <img className="" style={{ height: '120px', width: '120px' }} src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLwzhli3UiGlUsTtOAoxA_f4dKRDG9DGa99w&s" alt="Card" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className='row'>
+                                    {products.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item) => (
+                                        <div className='listParent mt-5' key={item.id}>
+                                            <img className='listimg' src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQLwzhli3UiGlUsTtOAoxA_f4dKRDG9DGa99w&s" alt="Not found" />
+                                            <div className='TxtParent'>
+                                                <h4>{item.title}</h4>
+                                                <p>{item.body}</p>
                                             </div>
-                                        )
-                                    })
-                                }
-                            </div>}
-
+                                            <p style={{ cursor: 'pointer', marginTop: '-50px' }} onClick={() => handleRemoveItem(item.id)}>&#x2716;</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <TablePagination
                                 rowsPerPageOptions={[6, 10, 15]}
                                 component="div"
-                                count={details.length}
+                                count={products.length}
                                 rowsPerPage={rowsPerPage}
                                 page={page}
                                 onPageChange={handleChangePage}
@@ -181,67 +140,41 @@ const Card = () => {
                     </div>
                 </div>
             </div>
-
-            <div>
-                <Modal open={open} onClose={handleClose} aria-labelledby="parent-modal-title" aria-describedby="parent-modal-description">
-                    <Box sx={{ ...style }}>
-                        <h4 id="parent-modal-title">Thank you for so much for taking the time!</h4>
-                        <p>Please fill the below details</p>
-                        <form onSubmit={handleSumbit}>
-                            <div className="form-outline mb-4">
-                                <input type="text" id="fname" name='fname' value={user.fname} onChange={handleChangeUser} placeholder='jon' className="form-control" />
-                                <label className="form-label" htmlFor="form4Example1">
-                                    first  Name
-                                </label>
-                            </div>
-
-                            <div className="form-outline mb-4">
-                                <input type="text" placeholder='wick' id="fname" name='lname' value={user.lname} onChange={handleChangeUser} className="form-control" />
-                                <label className="form-label" htmlFor="form4Example1">
-                                    last  Name
-                                </label>
-                            </div>
-
-                            <div data-mdb-input-init="" className="form-outline mb-4">
-                                <textarea className="form-control" placeholder='enter your full address'
-                                    id="fname" name='address' value={user.address} onChange={handleChangeUser}
-                                    rows={4}
-                                />
-                                <label className="form-label" htmlFor="form4Example3">
-                                    address
-                                </label>
-                            </div>
-
-                            <div className="form-outline mb-4">
-                                <input type="text" placeholder='india' id="country" name='country' value={user.country} onChange={handleChangeUser} className="form-control" />
-                                <label className="form-label" htmlFor="form4Example1">
-                                    country
-                                </label>
-                            </div>
-
-                            <div data-mdb-input-init="" className="form-outline mb-4">
-                                <input type="email" id="email" name='email' value={user.email} onChange={handleChangeUser} className="form-control" />
-                                <label className="form-label" htmlFor="form4Example2">
-                                    Email address
-                                </label>
-                            </div>
-
-                            <div className="form-outline mb-4">
-                                <input type="number" placeholder='1234569874' id="number" name='number' value={user.number} onChange={handleChangeUser} className="form-control" />
-                                <label className="form-label" htmlFor="form4Example1">
-                                    number
-                                </label>
-                            </div>
-
-                            <button type="submit" className="btn btn-primary btn-block mb-4">submit feedback</button>
-                        </form>
-
-                    </Box>
-                </Modal>
-            </div>
-
+            <Modal open={open} onClose={handleClose} aria-labelledby="parent-modal-title" aria-describedby="parent-modal-description">
+                <Box sx={style}>
+                    <h4 id="parent-modal-title">Thank you so much for taking the time!</h4>
+                    <p>Please fill in the details below</p>
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-outline mb-4">
+                            <input type="text" id="fname" name='fname' value={user.fname} onChange={handleChangeUser} placeholder='Jon' className="form-control" />
+                            <label className="form-label" htmlFor="fname">First Name</label>
+                        </div>
+                        <div className="form-outline mb-4">
+                            <input type="text" id="lname" name='lname' value={user.lname} onChange={handleChangeUser} placeholder='Wick' className="form-control" />
+                            <label className="form-label" htmlFor="lname">Last Name</label>
+                        </div>
+                        <div className="form-outline mb-4">
+                            <textarea className="form-control" id="address" name='address' value={user.address} onChange={handleChangeUser} placeholder='Enter your full address' rows={4} />
+                            <label className="form-label" htmlFor="address">Address</label>
+                        </div>
+                        <div className="form-outline mb-4">
+                            <input type="text" id="country" name='country' value={user.country} onChange={handleChangeUser} placeholder='India' className="form-control" />
+                            <label className="form-label" htmlFor="country">Country</label>
+                        </div>
+                        <div className="form-outline mb-4">
+                            <input type="email" id="email" name='email' value={user.email} onChange={handleChangeUser} placeholder='Email address' className="form-control" />
+                            <label className="form-label" htmlFor="email">Email address</label>
+                        </div>
+                        <div className="form-outline mb-4">
+                            <input type="number" id="number" name='number' value={user.number} onChange={handleChangeUser} placeholder='1234569874' className="form-control" />
+                            <label className="form-label" htmlFor="number">Number</label>
+                        </div>
+                        <button type="submit" className="btn btn-primary btn-block mb-4">Submit feedback</button>
+                    </form>
+                </Box>
+            </Modal>
         </>
-    )
-}
+    );
+};
 
-export default Card
+export default Card;
